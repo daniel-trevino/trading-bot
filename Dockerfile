@@ -6,7 +6,7 @@ ENV NODE_ENV production
 
 COPY ["package.json", "./"]
 
-RUN yarn global add @nestjs/cli @types/node
+RUN yarn global add @nestjs/cli
 
 RUN yarn
 
