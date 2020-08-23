@@ -1,0 +1,81 @@
+# This workflow will do a clean install of node dependencies, build the source code and run tests across different versions of node
+# For more information see: https://help.github.com/actions/language-and-framework-guides/using-nodejs-with-github-actions
+
+name: Node.js CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [14.x]
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Create a new release
+        id: yarn-cache-dir-path
+        run: echo "::set-output name=dir::$(yarn cache dir)"
+
+      - uses: actions/checkout@v2
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/cache@v2
+        env:
+          cache-name: cache-node-modules
+        with:
+          path: ${{ steps.yarn-cache-dir-path.outputs.dir }}
+          key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
+      - run: yarn
+      - run: git config --global user.email "github@netrek.se"
+      - run: git config --global user.name "Github"
+      - run: yarn release
+      - run: git push --follow-tags https://${{ secrets.GITHUB_TOKEN }}@github.com/danielivert/nota-service.git master
+  deploy:
+    needs: [release]
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [14.x]
+    steps:
+      - uses: actions/checkout@v2
+      - name: Get yarn cache directory path
+        id: yarn-cache-dir-path
+        run: |
+          echo "::set-output name=dir::$(yarn cache dir)"
+      - name: Set yarn global bin path
+        run: |
+          yarn config set prefix $(yarn cache dir)
+      - name: Add yarn bin path to system path
+        run: |
+          echo "::add-path::$(yarn global bin)"
+      - name: Set yarn global installation path
+        run: |
+          yarn config set global-folder $(yarn cache dir)
+      - name: CACHE ACTION
+        uses: actions/cache@v2
+        env:
+          cache-version: v1
+        id: yarn-cache
+        with:
+          path: |
+            ${{ steps.yarn-cache-dir-path.outputs.dir }}
+            **/node_modules
+          key: ${{ runner.os }}-yarn-${{ env.cache-version }}-${{ hashFiles('**/yarn.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-yarn-${{ env.cache-version }}-
+            ${{ runner.os }}-yarn-
+            ${{ runner.os }}-
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v1
+        with:
+          node-version: ${{ matrix.node-version }}
+      - run: yarn global add caprover
+      - run: caprover deploy -u ${{ secrets.SERVER_URL }} -p ${{ secrets.SERVER_PASSWORD }} --appName ${{ secrets.APP_NAME }} -b master
