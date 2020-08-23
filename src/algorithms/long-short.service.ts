@@ -59,6 +59,8 @@ export class LongShort {
     this.logger.log('Waiting for market to open...')
     await this.awaitMarketOpen()
     this.logger.log('Market opened.')
+
+    await this.rebalancePortfolioEveryMinute()
   }
 
   async awaitMarketOpen(): Promise<void> {
