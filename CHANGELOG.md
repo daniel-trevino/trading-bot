@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### 0.0.4 (2020-08-23)
+
+
+### Bug Fixes
+
+* move types/node to dependency ([33dd13e](https://github.com/danielivert/trading-bot/commit/33dd13e66723d53a49499590fa851803ed2fad3d))
+
 ### 0.0.3 (2020-08-23)
 
 
