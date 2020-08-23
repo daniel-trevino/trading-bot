@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## 0.1.0 (2020-08-23)
+
+
+### ⚠ BREAKING CHANGES
+
+* include complete long-short algorithm
+
+### Features
+
+* include complete long-short algorithm ([46873f3](https://github.com/danielivert/trading-bot/commit/46873f369264f5151ffa63e5010a53cddb77448b))
+
 ### 0.0.4 (2020-08-23)
 
 
