@@ -37,7 +37,7 @@ jobs:
       - run: git config --global user.email "github@netrek.se"
       - run: git config --global user.name "Github"
       - run: yarn release
-      - run: git push --follow-tags https://${{ secrets.GITHUB_TOKEN }}@github.com/danielivert/nota-service.git master
+      - run: git push --follow-tags https://${{ secrets.GITHUB_TOKEN }}@github.com/danielivert/trading-bot.git master
   deploy:
     needs: [release]
     runs-on: ubuntu-latest
