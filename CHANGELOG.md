@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### 0.1.2 (2020-08-24)
+
+
+### Features
+
+* rebalance porfolio for x seconds ([9cf65ac](https://github.com/danielivert/trading-bot/commit/9cf65acfcb65807698b061362a3d1fb66920d55a))
+
 ### 0.1.1 (2020-08-23)
 
 
