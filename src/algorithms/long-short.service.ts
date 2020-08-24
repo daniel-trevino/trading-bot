@@ -5,6 +5,7 @@ import { StockItem, Order, Clock } from './long-short.types'
 const Alpaca = require('@alpacahq/alpaca-trade-api')
 
 const MINUTE = 60000
+const THIRTY_SECONDS = 30
 const USE_POLYGON = false
 const SideType = { BUY: 'buy', SELL: 'sell' }
 const PositionType = { LONG: 'long', SHORT: 'short' }
@@ -60,7 +61,7 @@ export class LongShort {
     await this.awaitMarketOpen()
     this.logger.log('Market opened.')
 
-    await this.rebalancePortfolioEveryMinute()
+    await this.rebalancePorfolio(THIRTY_SECONDS)
   }
 
   async awaitMarketOpen(): Promise<void> {
@@ -144,7 +145,7 @@ export class LongShort {
     )
   }
 
-  async rebalancePortfolioEveryMinute(): Promise<void> {
+  async rebalancePorfolio(seconds: number): Promise<void> {
     // Rebalance the portfolio every minute, making necessary trades.
     const spin = setInterval(async () => {
       // Figure out when the market will close so we can prepare to sell beforehand.
@@ -192,7 +193,7 @@ export class LongShort {
         // Rebalance the portfolio.
         await this.rebalance()
       }
-    }, MINUTE)
+    }, seconds * 1000)
   }
 
   // Submit an order if quantity is above 0.
