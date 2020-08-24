@@ -78,4 +78,5 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
       - run: yarn global add caprover
-      - run: caprover deploy -u ${{ secrets.SERVER_URL }} -p ${{ secrets.SERVER_PASSWORD }} --appName ${{ secrets.APP_NAME }} -b master
+      - run: caprover deploy -u ${{ secrets.SERVER_URL }} -p ${{ secrets.SERVER_PASSWORD }} --appName ${{ secrets.BOT_NAME_1 }} -b master
+      - run: caprover deploy -u ${{ secrets.SERVER_URL }} -p ${{ secrets.SERVER_PASSWORD }} --appName ${{ secrets.BOT_NAME_2 }} -b master

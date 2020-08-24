@@ -1,18 +1,14 @@
 import { Injectable, Logger } from '@nestjs/common'
 import { STOCKS } from './long-short.constants'
-import { StockItem, Order, Clock } from './long-short.types'
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const Alpaca = require('@alpacahq/alpaca-trade-api')
+import { StockItem } from './long-short.types'
+import { AlpacaService } from 'src/alpaca/alpaca.service'
 
 const MINUTE = 60000
 const THIRTY_SECONDS = 30
-const USE_POLYGON = false
-const SideType = { BUY: 'buy', SELL: 'sell' }
-const PositionType = { LONG: 'long', SHORT: 'short' }
 
 @Injectable()
-export class LongShort {
-  alpaca: typeof Alpaca
+export class LongShortService {
+  alpaca: AlpacaService
   timeToClose: number
   stockList: StockItem[]
   long: string[]
@@ -25,14 +21,13 @@ export class LongShort {
   longAmount: number
   shortAmount: number
   bucketPct: number
-  private readonly logger = new Logger(LongShort.name)
+  private readonly logger = new Logger(LongShortService.name)
 
   constructor({ keyId, secretKey, paper = true, bucketPct = 0.25 }) {
-    this.alpaca = new Alpaca({
+    this.alpaca = new AlpacaService({
       keyId: keyId,
       secretKey: secretKey,
       paper: paper,
-      usePolygon: USE_POLYGON,
     })
 
     this.timeToClose = null
@@ -54,95 +49,14 @@ export class LongShort {
 
   async run(): Promise<void> {
     // First, cancel any existing orders so they don't impact our buying power.
-    await this.cancelExistingOrders()
+    await this.alpaca.cancelExistingOrders()
 
     // Wait for market to open.
     this.logger.log('Waiting for market to open...')
-    await this.awaitMarketOpen()
+    await this.alpaca.awaitMarketOpen()
     this.logger.log('Market opened.')
 
     await this.rebalancePorfolio(THIRTY_SECONDS)
-  }
-
-  async awaitMarketOpen(): Promise<void> {
-    return new Promise(resolve => {
-      const check = async () => {
-        try {
-          const clock = await this.alpaca.getClock()
-          if (clock.is_open) {
-            resolve()
-          } else {
-            const openTime = await this.getOpenTime()
-            const currTime = await this.getCurrentTime()
-            this.timeToClose = Math.floor((openTime - currTime) / 1000 / 60)
-            this.logger.log(
-              `${this.numberToHourMinutes(
-                this.timeToClose,
-              )} til next market open.`,
-            )
-            setTimeout(check, MINUTE)
-          }
-        } catch (err) {
-          this.logger.error(err.error)
-        }
-      }
-      check()
-    })
-  }
-
-  async getOpenTime(): Promise<number> {
-    const clock: Clock = await this.alpaca.getClock()
-    return new Date(
-      clock.next_open.substring(0, clock.next_close.length - 6),
-    ).getTime()
-  }
-
-  async getClosingTime(): Promise<number> {
-    const clock: Clock = await this.alpaca.getClock()
-    return new Date(
-      clock.next_close.substring(0, clock.next_close.length - 6),
-    ).getTime()
-  }
-
-  async getCurrentTime(): Promise<number> {
-    const clock: Clock = await this.alpaca.getClock()
-    return new Date(
-      clock.timestamp.substring(0, clock.timestamp.length - 6),
-    ).getTime()
-  }
-
-  numberToHourMinutes(number: number): string {
-    const hours = number / 60
-    const realHours = Math.floor(hours)
-    const minutes = (hours - realHours) * 60
-    const realMinutes = Math.round(minutes)
-    return realHours + ' hour(s) and ' + realMinutes + ' minute(s)'
-  }
-
-  async cancelExistingOrders(): Promise<Order[]> {
-    let orders: Order[]
-    try {
-      orders = await this.alpaca.getOrders({
-        status: 'open',
-        direction: 'desc',
-      })
-    } catch (err) {
-      this.logger.error(err.error)
-    }
-
-    this.logger.log('Canceling existing orders...')
-    return Promise.all<Order>(
-      orders.map(order => {
-        return new Promise(async resolve => {
-          try {
-            await this.alpaca.cancelOrder(order.id)
-          } catch (err) {
-            this.logger.error(err.error)
-          }
-          resolve()
-        })
-      }),
-    )
   }
 
   async rebalancePorfolio(seconds: number): Promise<void> {
@@ -150,8 +64,8 @@ export class LongShort {
     const spin = setInterval(async () => {
       // Figure out when the market will close so we can prepare to sell beforehand.
       try {
-        const closingTime = await this.getClosingTime()
-        const currTime = await this.getCurrentTime()
+        const closingTime = await this.alpaca.getClosingTime()
+        const currTime = await this.alpaca.getCurrentTime()
         this.timeToClose = Math.abs(closingTime - currTime)
       } catch (err) {
         this.logger.error(err.error)
@@ -164,17 +78,17 @@ export class LongShort {
         this.logger.log('Market closing soon. Closing positions.')
 
         try {
-          const positions = await this.alpaca.getPositions()
+          const positions = await this.alpaca.instance.getPositions()
 
           await Promise.all(
             positions.map(position =>
-              this.submitOrder({
+              this.alpaca.instance.submitOrder({
                 quantity: Math.abs(position.qty),
                 stock: position.symbol,
                 side:
-                  position.side === PositionType.LONG
-                    ? SideType.SELL
-                    : SideType.BUY,
+                  position.side === this.alpaca.positionType.LONG
+                    ? this.alpaca.sideType.SELL
+                    : this.alpaca.sideType.BUY,
               }),
             ),
           )
@@ -196,50 +110,22 @@ export class LongShort {
     }, seconds * 1000)
   }
 
-  // Submit an order if quantity is above 0.
-  async submitOrder({ quantity, stock, side }): Promise<boolean> {
-    return new Promise(async resolve => {
-      if (quantity <= 0) {
-        this.logger.log(
-          `Quantity is <=0, order of | ${quantity} ${stock} ${side} | not sent.`,
-        )
-        resolve(true)
-        return
-      }
-
-      try {
-        await this.alpaca.createOrder({
-          symbol: stock,
-          qty: quantity,
-          side,
-          type: 'market',
-          time_in_force: 'day',
-        })
-        this.logger.log(
-          `Market order of | ${quantity} ${stock} ${side} | completed.`,
-        )
-        resolve(true)
-      } catch (err) {
-        this.logger.log(
-          `Order of | ${quantity} ${stock} ${side} | did not go through.`,
-        )
-        resolve(false)
-      }
-    })
-  }
-
   // Get percent changes of the stock prices over the past 10 minutes.
   getPercentChanges(limit = 10): Promise<unknown> {
     return Promise.all(
       this.stockList.map(stock => {
         return new Promise(async resolve => {
           try {
-            const resp = await this.alpaca.getBars('minute', stock.name, {
-              limit: limit,
-            })
+            const resp = await this.alpaca.instance.getBars(
+              'minute',
+              stock.name,
+              {
+                limit: limit,
+              },
+            )
             // polygon and alpaca have different responses to keep backwards
             // compatibility, so we handle it a bit differently
-            if (this.alpaca.configuration.usePolygon) {
+            if (this.alpaca.instance.configuration.usePolygon) {
               const l = resp[stock.name].length
               const last_close = resp[stock.name][l - 1].c
               const first_open = resp[stock.name][0].o
@@ -285,7 +171,7 @@ export class LongShort {
     // Determine amount to long/short based on total stock price of each bucket.
     // Employs 130-30 Strategy
     try {
-      const result = await this.alpaca.getAccount()
+      const result = await this.alpaca.instance.getAccount()
       const equity = result.equity
       this.shortAmount = 0.3 * equity
       this.longAmount = Number(this.shortAmount) + Number(equity)
@@ -316,12 +202,12 @@ export class LongShort {
       stocks.map(stock => {
         return new Promise(async resolve => {
           try {
-            const resp = await this.alpaca.getBars('minute', stock, {
+            const resp = await this.alpaca.instance.getBars('minute', stock, {
               limit: 1,
             })
             // polygon and alpaca have different responses to keep backwards
             // compatibility, so we handle it a bit differently
-            if (this.alpaca.configuration.usePolygon) {
+            if (this.alpaca.instance.configuration.usePolygon) {
               resolve(resp[stock][0].c)
             } else {
               resolve(resp[stock][0].closePrice)
@@ -339,7 +225,7 @@ export class LongShort {
     await this.rerank()
 
     // Clear existing orders again.
-    await this.cancelExistingOrders()
+    await this.alpaca.cancelExistingOrders()
 
     this.logger.log(`We are taking a long position in: ${this.long.toString()}`)
     this.logger.log(
@@ -350,7 +236,7 @@ export class LongShort {
     // Adjust position quantities if needed.
     let positions
     try {
-      positions = await this.alpaca.getPositions()
+      positions = await this.alpaca.instance.getPositions()
     } catch (err) {
       this.logger.error(err.error)
     }
@@ -370,26 +256,26 @@ export class LongShort {
             if (this.short.indexOf(symbol) < 0) {
               // Clear position.
               try {
-                await this.submitOrder({
+                await this.alpaca.instance.submitOrder({
                   quantity,
                   stock: symbol,
                   side:
-                    position.side === PositionType.LONG
-                      ? SideType.SELL
-                      : SideType.BUY,
+                    position.side === this.alpaca.positionType.LONG
+                      ? this.alpaca.sideType.SELL
+                      : this.alpaca.sideType.BUY,
                 })
                 resolve()
               } catch (err) {
                 this.logger.error(err.error)
               }
-            } else if (position.side === PositionType.LONG) {
+            } else if (position.side === this.alpaca.positionType.LONG) {
               // Position in short list.
               try {
                 // Position changed from long to short. Clear long position and short instead
-                await this.submitOrder({
+                await this.alpaca.instance.submitOrder({
                   quantity,
                   stock: symbol,
-                  side: SideType.SELL,
+                  side: this.alpaca.sideType.SELL,
                 })
                 resolve()
               } catch (err) {
@@ -401,12 +287,15 @@ export class LongShort {
                 // Need to adjust position amount
                 const diff = Number(quantity) - Number(this.qShort)
                 try {
-                  await this.submitOrder({
+                  await this.alpaca.instance.submitOrder({
                     quantity: Math.abs(diff),
                     stock: symbol,
                     // buy = Too many short positions. Buy some back to rebalance.
                     // sell = Too little short positions. Sell some more.
-                    side: diff > 0 ? SideType.BUY : SideType.SELL,
+                    side:
+                      diff > 0
+                        ? this.alpaca.sideType.BUY
+                        : this.alpaca.sideType.SELL,
                   })
                 } catch (err) {
                   this.logger.error(err.error)
@@ -416,14 +305,14 @@ export class LongShort {
               this.blacklist.add(symbol)
               resolve()
             }
-          } else if (position.side === PositionType.SHORT) {
+          } else if (position.side === this.alpaca.positionType.SHORT) {
             // Position in long list.
             // Position changed from short to long. Clear short position and long instead.
             try {
-              await this.submitOrder({
+              await this.alpaca.instance.submitOrder({
                 quantity,
                 stock: symbol,
-                side: SideType.BUY,
+                side: this.alpaca.sideType.BUY,
               })
               resolve()
             } catch (err) {
@@ -436,9 +325,10 @@ export class LongShort {
               const diff = Number(quantity) - Number(this.qLong)
               // sell = Too many long positions. Sell some to rebalance.
               // buy = Too little long positions. Buy some more.
-              const side = diff > 0 ? SideType.SELL : SideType.BUY
+              const side =
+                diff > 0 ? this.alpaca.sideType.SELL : this.alpaca.sideType.BUY
               try {
-                await this.submitOrder({
+                await this.alpaca.instance.submitOrder({
                   quantity: Math.abs(diff),
                   stock: symbol,
                   side,
@@ -464,12 +354,12 @@ export class LongShort {
         this.sendBatchOrder({
           quantity: this.qLong,
           stocks: this.long,
-          side: SideType.BUY,
+          side: this.alpaca.sideType.BUY,
         }),
         this.sendBatchOrder({
           quantity: this.qShort,
           stocks: this.short,
-          side: SideType.SELL,
+          side: this.alpaca.sideType.SELL,
         }),
       ])
 
@@ -510,10 +400,10 @@ export class LongShort {
           allProms = [
             ...allProms,
             ...executed.long.map(stock =>
-              this.submitOrder({
+              this.alpaca.instance.submitOrder({
                 quantity: this.qLong,
                 stock,
-                side: SideType.BUY,
+                side: this.alpaca.sideType.BUY,
               }),
             ),
           ]
@@ -524,10 +414,10 @@ export class LongShort {
           allProms = [
             ...allProms,
             ...executed.short.map(stock =>
-              this.submitOrder({
+              this.alpaca.instance.submitOrder({
                 quantity: this.qShort,
                 stock,
-                side: SideType.SELL,
+                side: this.alpaca.sideType.SELL,
               }),
             ),
           ]
@@ -558,7 +448,7 @@ export class LongShort {
           return new Promise(async resolve => {
             if (!this.blacklist.has(stock)) {
               try {
-                const isSubmitted = await this.submitOrder({
+                const isSubmitted = await this.alpaca.instance.submitOrder({
                   quantity,
                   stock,
                   side,
