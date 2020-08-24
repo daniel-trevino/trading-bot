@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## 0.2.0 (2020-08-24)
+
+
+### ⚠ BREAKING CHANGES
+
+* introduce alpaca service
+
+### Features
+
+* introduce alpaca service ([925140e](https://github.com/danielivert/trading-bot/commit/925140eb11e7490bfd2f329da403e954c5c0a126))
+
 ### 0.1.2 (2020-08-24)
 
 
