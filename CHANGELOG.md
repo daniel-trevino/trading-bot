@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### 0.3.1 (2020-08-26)
+
+
+### Features
+
+* add mean-reversion ([51257c1](https://github.com/danielivert/trading-bot/commit/51257c1c968b1995a2e4c0fe5098dfbf21f454b6))
+
 ## 0.3.0 (2020-08-26)
 
 
