@@ -82,7 +82,7 @@ export class LongShortService {
 
           await Promise.all(
             positions.map(position =>
-              this.alpaca.instance.submitOrder({
+              this.alpaca.submitOrder({
                 quantity: Math.abs(position.qty),
                 stock: position.symbol,
                 side:
@@ -237,6 +237,7 @@ export class LongShortService {
     let positions
     try {
       positions = await this.alpaca.instance.getPositions()
+      console.log(positions)
     } catch (err) {
       this.logger.error(err.error)
     }
@@ -256,7 +257,7 @@ export class LongShortService {
             if (this.short.indexOf(symbol) < 0) {
               // Clear position.
               try {
-                await this.alpaca.instance.submitOrder({
+                await this.alpaca.submitOrder({
                   quantity,
                   stock: symbol,
                   side:
@@ -272,7 +273,7 @@ export class LongShortService {
               // Position in short list.
               try {
                 // Position changed from long to short. Clear long position and short instead
-                await this.alpaca.instance.submitOrder({
+                await this.alpaca.submitOrder({
                   quantity,
                   stock: symbol,
                   side: this.alpaca.sideType.SELL,
@@ -287,7 +288,7 @@ export class LongShortService {
                 // Need to adjust position amount
                 const diff = Number(quantity) - Number(this.qShort)
                 try {
-                  await this.alpaca.instance.submitOrder({
+                  await this.alpaca.submitOrder({
                     quantity: Math.abs(diff),
                     stock: symbol,
                     // buy = Too many short positions. Buy some back to rebalance.
@@ -309,7 +310,7 @@ export class LongShortService {
             // Position in long list.
             // Position changed from short to long. Clear short position and long instead.
             try {
-              await this.alpaca.instance.submitOrder({
+              await this.alpaca.submitOrder({
                 quantity,
                 stock: symbol,
                 side: this.alpaca.sideType.BUY,
@@ -328,7 +329,7 @@ export class LongShortService {
               const side =
                 diff > 0 ? this.alpaca.sideType.SELL : this.alpaca.sideType.BUY
               try {
-                await this.alpaca.instance.submitOrder({
+                await this.alpaca.submitOrder({
                   quantity: Math.abs(diff),
                   stock: symbol,
                   side,
@@ -400,7 +401,7 @@ export class LongShortService {
           allProms = [
             ...allProms,
             ...executed.long.map(stock =>
-              this.alpaca.instance.submitOrder({
+              this.alpaca.submitOrder({
                 quantity: this.qLong,
                 stock,
                 side: this.alpaca.sideType.BUY,
@@ -414,7 +415,7 @@ export class LongShortService {
           allProms = [
             ...allProms,
             ...executed.short.map(stock =>
-              this.alpaca.instance.submitOrder({
+              this.alpaca.submitOrder({
                 quantity: this.qShort,
                 stock,
                 side: this.alpaca.sideType.SELL,
@@ -430,7 +431,7 @@ export class LongShortService {
         resolve()
       })
     } catch (err) {
-      this.logger.error(err.error)
+      this.logger.error(err.error, 'Reorder stocks try, catch')
     }
   }
 
@@ -448,7 +449,7 @@ export class LongShortService {
           return new Promise(async resolve => {
             if (!this.blacklist.has(stock)) {
               try {
-                const isSubmitted = await this.alpaca.instance.submitOrder({
+                const isSubmitted = await this.alpaca.submitOrder({
                   quantity,
                   stock,
                   side,
@@ -459,7 +460,7 @@ export class LongShortService {
                   incomplete.push(stock)
                 }
               } catch (err) {
-                this.logger.error(err.error)
+                this.logger.error(err.error, 'sendBatchOrder')
               }
             }
             resolve()

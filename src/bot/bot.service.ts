@@ -29,16 +29,14 @@ export class BotService implements OnModuleInit {
   async run(): Promise<void> {
     const botType: BotType = this.configService.get<BotType>('BOT_TYPE')
 
-    this.logger.log('Initializing Long Short algorithm')
-    await this.longShort.run()
-    // if (botType === BotType.LONG_SHORT) {
-    //   this.logger.log('Initializing Long Short algorithm')
-    //   await this.longShort.run()
-    // } else if (botType === BotType.MEAN_REVERSION) {
-    //   this.logger.log('Initializing Mean Reversion algorithm')
-    //   await this.meanReversion.run()
-    // } else {
-    //   this.logger.error('Please include a valid BOT_TYPE env variable')
-    // }
+    if (botType === BotType.LONG_SHORT) {
+      this.logger.log('Initializing Long Short algorithm')
+      await this.longShort.run()
+    } else if (botType === BotType.MEAN_REVERSION) {
+      this.logger.log('Initializing Mean Reversion algorithm')
+      await this.meanReversion.run()
+    } else {
+      this.logger.error('Please include a valid BOT_TYPE env variable')
+    }
   }
 }
