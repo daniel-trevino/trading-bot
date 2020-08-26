@@ -80,3 +80,6 @@ jobs:
       - run: yarn global add caprover
       - run: caprover deploy -u ${{ secrets.SERVER_URL }} -p ${{ secrets.SERVER_PASSWORD }} --appName ${{ secrets.BOT_NAME_1 }} -b master
       - run: caprover deploy -u ${{ secrets.SERVER_URL }} -p ${{ secrets.SERVER_PASSWORD }} --appName ${{ secrets.BOT_NAME_2 }} -b master
+      - run: caprover deploy -u ${{ secrets.SERVER_URL }} -p ${{ secrets.SERVER_PASSWORD }} --appName trading-bot-mr-aapl -b master
+      - run: caprover deploy -u ${{ secrets.SERVER_URL }} -p ${{ secrets.SERVER_PASSWORD }} --appName trading-bot-mr-nflx -b master
+      - run: caprover deploy -u ${{ secrets.SERVER_URL }} -p ${{ secrets.SERVER_PASSWORD }} --appName trading-bot-mr-tsla -b master

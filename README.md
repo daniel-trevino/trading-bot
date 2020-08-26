@@ -50,3 +50,13 @@ There are two different types of algorithms
 
 - `MEAN_REVERSION`
 - `LONG_SHORT`
+
+## MEAN_REVERSION
+
+This algorithm requires an additional env variable:
+
+```
+MEAN_REVERSION_STOCK
+```
+
+This variable should have the value of the name of the stock. Example Apple = AAPL

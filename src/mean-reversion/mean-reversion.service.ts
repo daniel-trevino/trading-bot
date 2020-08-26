@@ -1,5 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common'
 import { AlpacaService } from 'src/alpaca/alpaca.service'
+import { ConfigService } from '@nestjs/config'
+import { EnvironmentalVariables } from 'src/utils/constants'
 
 const MINUTE = 60000
 const TWENTY_MINUTES = 20
@@ -12,6 +14,7 @@ export class MeanReversionService {
   timeToClose: number
   // Stock that the algo will trade.
   stock: string
+  private configService = new ConfigService()
   private readonly logger = new Logger(MeanReversionService.name)
 
   constructor({ keyId, secretKey, paper = true }) {
@@ -26,10 +29,18 @@ export class MeanReversionService {
     this.runningAverage = 0
     this.lastOrder = null
     // Stock that the algo will trade.
-    this.stock = 'AAPL'
+    this.stock = this.configService.get<EnvironmentalVariables>(
+      EnvironmentalVariables.MEAN_REVERSION_STOCK,
+    )
   }
 
   async run(): Promise<void> {
+    if (!this.stock) {
+      this.logger.error(
+        'Please include a valid MEAN_REVERSION_STOCK env variable',
+      )
+      return
+    }
     // First, cancel any existing orders so they don't impact our buying power.
     await this.alpaca.cancelExistingOrders()
 
@@ -38,6 +49,7 @@ export class MeanReversionService {
     await this.alpaca.awaitMarketOpen()
     this.logger.log('Market opened.')
 
+    this.logger.log(`--- Trading stock ${this.stock} ---`)
     await this.getAvgPricesOnLastXMinutes(TWENTY_MINUTES)
   }
 
