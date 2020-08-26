@@ -63,15 +63,8 @@ export class LongShortService {
     // Rebalance the portfolio every minute, making necessary trades.
     const spin = setInterval(async () => {
       // Figure out when the market will close so we can prepare to sell beforehand.
-      try {
-        const closingTime = await this.alpaca.getClosingTime()
-        const currTime = await this.alpaca.getCurrentTime()
-        this.timeToClose = Math.abs(closingTime - currTime)
-      } catch (err) {
-        this.logger.error(err.error)
-      }
-
       const INTERVAL = 15 // minutes
+      this.timeToClose = await this.alpaca.getTimeToClose()
 
       if (this.timeToClose < MINUTE * INTERVAL) {
         // Close all positions when 15 minutes til market close.

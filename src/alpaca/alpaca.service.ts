@@ -70,6 +70,12 @@ export class AlpacaService {
     ).getTime()
   }
 
+  async getTimeToClose(): Promise<number> {
+    const closingTime = await this.getClosingTime()
+    const currentTime = await this.getCurrentTime()
+    return Math.abs(closingTime - currentTime)
+  }
+
   numberToHourMinutes(number: number): string {
     const hours = number / 60
     const realHours = Math.floor(hours)
@@ -132,6 +138,51 @@ export class AlpacaService {
           `Order of | ${quantity} ${stock} ${side} | did not go through.`,
         )
         resolve(false)
+      }
+    })
+  }
+
+  // Submit a limit order if quantity is above 0.
+  async submitLimitOrder({
+    quantity,
+    stock,
+    price,
+    side,
+  }): Promise<any | undefined> {
+    return new Promise(async resolve => {
+      if (quantity <= 0) {
+        this.logger.log(
+          `Quantity is <=0, order of | ${quantity} ${stock} ${side} | not sent.`,
+        )
+        resolve(true)
+        return
+      }
+
+      try {
+        const lastOrder = await this.instance.createOrder({
+          symbol: stock,
+          qty: quantity,
+          side: side,
+          type: 'limit',
+          time_in_force: 'day',
+          limit_price: price,
+        })
+        this.logger.log(
+          'Limit order of |' + quantity + ' ' + stock + ' ' + side + '| sent.',
+        )
+
+        resolve(lastOrder)
+      } catch (err) {
+        this.logger.error(
+          'Order of |' +
+            quantity +
+            ' ' +
+            stock +
+            ' ' +
+            side +
+            '| did not go through.',
+        )
+        resolve(undefined)
       }
     })
   }
