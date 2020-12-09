@@ -40,6 +40,15 @@ $ yarn test:e2e
 $ yarn test:cov
 ```
 
+## Get started
+
+- Create an account on [Alpaca.markets](https://alpaca.markets)
+- Go to `paper trading` on the left navigation
+- Obtain your API keys on that view.
+- Add both `ALPACA_API_KEY` & `ALPACA_SECRET_KEY` to the .env variables
+- Add the algorithm you want to try on the .env file. Example: `BOT_TYPE=LONG_SHORT`
+- Run the app
+
 ## Environmental variables
 
 Please have a look at .env.sample to get started
@@ -60,3 +69,7 @@ MEAN_REVERSION_STOCK
 ```
 
 This variable should have the value of the name of the stock. Example Apple = AAPL
+
+## Disclaimer
+
+This project is done to test different trading strategies in a paper trading environment. If you want to try this to do live trading do it by your own risk.
