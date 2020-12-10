@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### 0.3.4 (2020-12-10)
+
+
+### Bug Fixes
+
+* broken ci ([0b95176](https://github.com/danielivert/trading-bot/commit/0b95176a7f8d3708606e8c02a2c362a86a8a0908))
+
 ### 0.3.3 (2020-12-09)
 
 
